@@ -1,5 +1,5 @@
-name: example
-description: A new Flutter project.
+name: photo_view_example
+description: Sample project for Photo View library.
 
 dependencies:
   flutter_svg:
@@ -27,6 +27,8 @@ flutter:
     - assets/peanut.gif
     - assets/large-image.jpg
     - assets/small-image.jpg
+    - assets/large_image_4k.jpg
+    - assets/small_image_flutter.png
     - assets/gallery1.jpeg
     - assets/gallery2.jpeg
     - assets/gallery3.jpeg

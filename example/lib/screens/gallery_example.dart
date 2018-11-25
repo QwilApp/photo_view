@@ -91,7 +91,7 @@ class GalleryPhotoViewWrapper extends StatefulWidget {
   final ImageProvider imageProvider;
   final ImageProvider imageProvider2;
   final ImageProvider imageProvider3;
-  final Widget loadingChild;
+  final WidgetBuilder loadingChild;
   final Decoration backgroundDecoration;
   final dynamic minScale;
   final dynamic maxScale;
@@ -145,7 +145,7 @@ class _GalleryPhotoViewWrapperState extends State<GalleryPhotoViewWrapper> {
                     heroTag: "tag3",
                   ),
                 ],
-                loadingChild: widget.loadingChild,
+                activityIndicator: widget.loadingChild,
                 backgroundDecoration: widget.backgroundDecoration,
                 pageController: widget.pageController,
                 onPageChanged: onPageChanged,

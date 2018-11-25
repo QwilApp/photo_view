@@ -48,7 +48,7 @@ class HeroPhotoViewWrapper extends StatelessWidget {
       this.maxScale});
 
   final ImageProvider imageProvider;
-  final Widget loadingChild;
+  final WidgetBuilder loadingChild;
   final Decoration backgroundDecoration;
   final dynamic minScale;
   final dynamic maxScale;
@@ -61,7 +61,7 @@ class HeroPhotoViewWrapper extends StatelessWidget {
         ),
         child: PhotoView(
           imageProvider: imageProvider,
-          loadingChild: loadingChild,
+          activityIndicator: loadingChild,
           backgroundDecoration: backgroundDecoration,
           minScale: minScale,
           maxScale: maxScale,

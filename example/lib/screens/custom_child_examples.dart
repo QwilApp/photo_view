@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:photo_view/photo_view.dart';
+
 import './app_bar.dart';
 
 class CustomChildExample extends StatelessWidget {
@@ -25,31 +25,25 @@ class CustomChildExample extends StatelessWidget {
                 ),
               ),
               Container(
-                margin: const EdgeInsets.symmetric(
-                    vertical: 20.0, horizontal: 20.0),
+                margin: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
                 height: 450.0,
                 child: ClipRect(
-                  child: PhotoView.customChild(
-                    child: Container(
-                        decoration:
-                            const BoxDecoration(color: Colors.lightGreenAccent),
-                        padding: const EdgeInsets.all(10.0),
-                        child: Column(
-                          children: <Widget>[
-                            const Text(
-                              "Hello there, this is a text, and that is a svg",
-                              style: const TextStyle(fontSize: 10.0),
-                              textAlign: TextAlign.center,
-                            ),
-                            SvgPicture.asset(
-                              "assets/firefox.svg",
-                              height: 100.0,
-                            )
-                          ],
-                        )),
-                    childSize: const Size(220.0, 250.0),
-                    initialScale: 10.0,
-                  ),
+                  child: Container(
+                      decoration: const BoxDecoration(color: Colors.lightGreenAccent),
+                      padding: const EdgeInsets.all(10.0),
+                      child: Column(
+                        children: <Widget>[
+                          const Text(
+                            "Hello there, this is a text, and that is a svg",
+                            style: const TextStyle(fontSize: 10.0),
+                            textAlign: TextAlign.center,
+                          ),
+                          SvgPicture.asset(
+                            "assets/firefox.svg",
+                            height: 100.0,
+                          )
+                        ],
+                      )),
                 ),
               )
             ],

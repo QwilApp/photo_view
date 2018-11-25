@@ -1,18 +1,21 @@
 library photo_view;
 
-import 'dart:async';
+import 'dart:typed_data';
+
+import 'package:after_layout/after_layout.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:photo_view/src/photo_view_computed_scale.dart';
 import 'package:photo_view/src/photo_view_image_wrapper.dart';
+import 'package:photo_view/src/photo_view_loading_phase.dart';
 import 'package:photo_view/src/photo_view_scale_boundaries.dart';
 import 'package:photo_view/src/photo_view_scale_state.dart';
-import 'package:after_layout/after_layout.dart';
 
-export 'package:photo_view/src/photo_view_computed_scale.dart';
 export 'package:photo_view/photo_view_gallery.dart';
+export 'package:photo_view/src/photo_view_computed_scale.dart';
 
-typedef PhotoViewScaleStateChangedCallback = void Function(
-    PhotoViewScaleState scaleState);
+typedef PhotoViewScaleStateChangedCallback = void Function(PhotoViewScaleState scaleState);
+typedef _ImageProviderResolverListener = void Function();
 
 /// A [StatefulWidget] that contains all the photo view rendering elements.
 ///
@@ -25,7 +28,7 @@ typedef PhotoViewScaleStateChangedCallback = void Function(
 /// ```
 /// PhotoView(
 ///  imageProvider: imageProvider,
-///  loadingChild: new LoadingText(),
+///  activityIndicator: new LoadingText(),
 ///  backgroundDecoration: BoxDecoration(color: Colors.white),
 ///  minScale: PhotoViewComputedScale.contained,
 ///  maxScale: 2.0,
@@ -85,46 +88,79 @@ class PhotoView extends StatefulWidget {
   const PhotoView({
     Key key,
     @required this.imageProvider,
-    this.loadingChild,
-    this.backgroundDecoration =
-        const BoxDecoration(color: const Color.fromRGBO(0, 0, 0, 1.0)),
+    @required this.placeholderProvider,
+    this.activityIndicator,
     this.minScale,
     this.maxScale,
     this.initialScale,
-    this.gaplessPlayback = false,
     this.customSize,
     this.heroTag,
     this.scaleStateChangedCallback,
+    this.alignment = Alignment.center,
     this.enableRotation = false,
-  })  : child = null,
-        childSize = null,
+    this.backgroundDecoration = const BoxDecoration(color: Colors.white12),
+  })  : assert(imageProvider != null),
+        assert(placeholderProvider != null),
+        assert(alignment != null),
         super(key: key);
 
-  const PhotoView.customChild({
+  PhotoView.memoryNetwork({
     Key key,
-    @required this.child,
-    @required this.childSize,
-    this.backgroundDecoration =
-        const BoxDecoration(color: const Color.fromRGBO(0, 0, 0, 1.0)),
+    @required this.imageProvider,
+    @required Uint8List placeholder,
+    this.activityIndicator,
     this.minScale,
     this.maxScale,
-    this.initialScale,
+    this.initialScale = 1.0,
     this.customSize,
     this.heroTag,
     this.scaleStateChangedCallback,
+    this.alignment = Alignment.center,
     this.enableRotation = false,
-  })  : loadingChild = null,
-        imageProvider = null,
-        gaplessPlayback = false,
+    this.backgroundDecoration = const BoxDecoration(color: Colors.white12),
+  })  : assert(imageProvider != null),
+        assert(placeholder != null),
+        assert(alignment != null),
+        placeholderProvider = MemoryImage(placeholder, scale: initialScale),
+        super(key: key);
+
+  PhotoView.assetNetwork({
+    Key key,
+    @required this.imageProvider,
+    @required String placeholder,
+    AssetBundle bundle,
+    this.activityIndicator,
+    this.minScale,
+    this.maxScale,
+    this.initialScale = 1.0,
+    this.customSize,
+    this.heroTag,
+    this.scaleStateChangedCallback,
+    this.alignment = Alignment.center,
+    this.enableRotation = false,
+    this.backgroundDecoration = const BoxDecoration(color: Colors.white12),
+  })  : assert(imageProvider != null),
+        assert(placeholder != null),
+        assert(alignment != null),
+        placeholderProvider = initialScale != null
+            ? ExactAssetImage(placeholder, bundle: bundle, scale: initialScale)
+            : AssetImage(placeholder, bundle: bundle),
         super(key: key);
 
   /// Given a [imageProvider] it resolves into an zoomable image widget using. It
   /// is required
   final ImageProvider imageProvider;
 
-  /// While [imageProvider] is not resolved, [loadingChild] is build by [PhotoView]
+  /// Given a [placeholderProvider] it resolves into an placeholder before zoomable image widget will be configured.
+  /// It is required
+  final ImageProvider placeholderProvider;
+
+  /// While [imageProvider] is not resolved, [activityIndicator] is build by [PhotoView]
   /// into the screen, by default it is a centered [CircularProgressIndicator]
-  final Widget loadingChild;
+  final WidgetBuilder activityIndicator;
+
+  /// Widget alignment inside of page, Centered by default.
+  final AlignmentGeometry alignment;
 
   /// Changes the background behind image, defaults to `Colors.black`.
   final Decoration backgroundDecoration;
@@ -139,15 +175,10 @@ class PhotoView extends StatefulWidget {
   /// [PhotoViewComputedScale], that can be multiplied by a double
   final dynamic maxScale;
 
-  /// Defines the inial size in which the image will be assume in the mounting of the component, it
+  /// Defines the initial size in which the image will be assume in the mounting of the component, it
   /// is proportional to the original image size. Can be either a double (absolute value) or a
   /// [PhotoViewComputedScale], that can be multiplied by a double
   final dynamic initialScale;
-
-  /// This is used to continue showing the old image (`true`), or briefly show
-  /// nothing (`false`), when the `imageProvider` changes. By default it's set
-  /// to `false`.
-  final bool gaplessPlayback;
 
   /// Defines the size of the scaling base of the image inside [PhotoView],
   /// by default it is `MediaQuery.of(context).size`.
@@ -160,39 +191,106 @@ class PhotoView extends StatefulWidget {
 
   final bool enableRotation;
 
-  final Widget child;
-
-  final Size childSize;
-
   @override
-  State<StatefulWidget> createState() {
-    return _PhotoViewState();
-  }
+  State<StatefulWidget> createState() => _PhotoViewState();
 }
 
-class _PhotoViewState extends State<PhotoView>
-    with AfterLayoutMixin<PhotoView> {
+class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> {
+  _ImageProviderResolver _imageResolver;
+  _ImageProviderResolver _placeholderResolver;
+
   PhotoViewScaleState _scaleState;
   Size _size;
-  Size _childSize;
 
-  Future<ImageInfo> _getImage() {
-    final Completer completer = Completer<ImageInfo>();
-    final ImageStream stream =
-        widget.imageProvider.resolve(const ImageConfiguration());
-    final listener = (ImageInfo info, bool synchronousCall) {
-      if (!completer.isCompleted) {
-        completer.complete(info);
-        setState(() {
-          _childSize = Size(info.image.width / 1, info.image.height / 1);
+  PhotoViewLoadingPhase _phase = PhotoViewLoadingPhase.start;
+
+  PhotoViewLoadingPhase get phase => _phase;
+
+  ImageProvider get provider =>
+      _isShowingPlaceholder ? widget.placeholderProvider : widget.imageProvider;
+
+  @override
+  void initState() {
+    _imageResolver = _ImageProviderResolver(state: this, resolverListener: _updatePhase);
+    _placeholderResolver = _ImageProviderResolver(
+        state: this,
+        resolverListener: () {
+          setState(() {
+            // Trigger rebuild to display the placeholder image
+          });
         });
+    _scaleState = PhotoViewScaleState.initial;
+    super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    _resolveImage();
+    super.didChangeDependencies();
+  }
+
+  @override
+  void didUpdateWidget(PhotoView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.imageProvider != oldWidget.imageProvider ||
+        widget.placeholderProvider != widget.placeholderProvider) {
+      _resolveImage();
+    }
+  }
+
+  @override
+  void reassemble() {
+    _resolveImage(); // in case the image cache was flushed
+    super.reassemble();
+  }
+
+  void _resolveImage() {
+    _imageResolver.resolve(widget.imageProvider);
+
+    // No need to resolve the placeholder if we are past the placeholder stage.
+    if (_isShowingPlaceholder) {
+      _placeholderResolver.resolve(widget.placeholderProvider);
+    }
+
+    if (_phase == PhotoViewLoadingPhase.start) {
+      _updatePhase();
+    }
+  }
+
+  void _updatePhase() {
+    setState(() {
+      switch (_phase) {
+        case PhotoViewLoadingPhase.start:
+          _phase = _imageResolver._imageInfo != null
+              ? PhotoViewLoadingPhase.completed
+              : PhotoViewLoadingPhase.loading;
+          break;
+        case PhotoViewLoadingPhase.loading:
+          if (_imageResolver._imageInfo != null) {
+            _phase = PhotoViewLoadingPhase.completed;
+          }
+          break;
+        case PhotoViewLoadingPhase.completed:
+          // Nothing to do.
+          break;
       }
-    };
-    stream.addListener(listener);
-    completer.future.then((_) {
-      stream.removeListener(listener);
     });
-    return completer.future;
+  }
+
+  @override
+  void dispose() {
+    _imageResolver.stopListening();
+    _placeholderResolver.stopListening();
+    super.dispose();
+  }
+
+  bool get _isShowingPlaceholder {
+    assert(_phase != null);
+    return _phase != PhotoViewLoadingPhase.completed;
+  }
+
+  ImageInfo get _imageInfo {
+    return _isShowingPlaceholder ? _placeholderResolver._imageInfo : _imageResolver._imageInfo;
   }
 
   void setNextScaleState(PhotoViewScaleState newScaleState) {
@@ -214,137 +312,82 @@ class _PhotoViewState extends State<PhotoView>
   }
 
   @override
-  void initState() {
-    super.initState();
-    widget.child ?? _getImage();
-    _childSize = widget.child != null && widget.childSize != null
-        ? widget.childSize
-        : Size.zero;
-    _scaleState = PhotoViewScaleState.initial;
-  }
-
-  @override
   void afterFirstLayout(BuildContext context) {
     setState(() {
       _size = context.size;
     });
   }
 
+  Size get _computedSize => widget.customSize ?? _size ?? MediaQuery.of(context).size;
+
   @override
   Widget build(BuildContext context) {
-    return widget.child == null
-        ? _buildImage(context)
-        : _buildCustomChild(context);
-  }
+    assert(_phase != PhotoViewLoadingPhase.start);
 
-  Widget _buildCustomChild(BuildContext context) {
-    return PhotoViewImageWrapper.customChild(
-      customChild: widget.child,
+    final Widget imageWrapper = PhotoViewImageWrapper(
       setNextScaleState: setNextScaleState,
       onStartPanning: onStartPanning,
-      childSize: _childSize,
+      imageProvider: _isShowingPlaceholder ? widget.placeholderProvider : widget.imageProvider,
+      childSize: _computedSize,
       scaleState: _scaleState,
       backgroundDecoration: widget.backgroundDecoration,
       size: _computedSize,
       enableRotation: widget.enableRotation,
+      enableScaling: !_isShowingPlaceholder,
       scaleBoundaries: ScaleBoundaries(
         widget.minScale ?? 0.0,
         widget.maxScale ?? double.infinity,
         widget.initialScale ?? PhotoViewComputedScale.contained,
-        childSize: _childSize,
+        childSize: _computedSize,
         size: _computedSize,
       ),
       heroTag: widget.heroTag,
     );
-  }
 
-  Widget _buildImage(BuildContext context) {
-    return widget.heroTag == null
-        ? _buildWithFuture(context)
-        : _buildSync(context);
+    return widget.activityIndicator != null && _isShowingPlaceholder
+        ? Stack(
+            alignment: AlignmentDirectional.center,
+            children: <Widget>[
+              imageWrapper,
+              widget.activityIndicator(context),
+            ],
+          )
+        : imageWrapper;
   }
-
-  Widget _buildWithFuture(BuildContext context) {
-    return FutureBuilder(
-        future: _getImage(),
-        builder: (BuildContext context, AsyncSnapshot<ImageInfo> info) {
-          if (info.hasData) {
-            return _buildWrapperImage(context);
-          } else {
-            return _buildLoading();
-          }
-        });
-  }
-
-  Widget _buildSync(BuildContext context) {
-    if (_childSize == null) {
-      return _buildLoading();
-    }
-    return _buildWrapperImage(context);
-  }
-
-  Widget _buildWrapperImage(BuildContext context) {
-    return PhotoViewImageWrapper(
-      setNextScaleState: setNextScaleState,
-      onStartPanning: onStartPanning,
-      imageProvider: widget.imageProvider,
-      childSize: _childSize,
-      scaleState: _scaleState,
-      backgroundDecoration: widget.backgroundDecoration,
-      gaplessPlayback: widget.gaplessPlayback,
-      size: _computedSize,
-      enableRotation: widget.enableRotation,
-      scaleBoundaries: ScaleBoundaries(
-        widget.minScale ?? 0.0,
-        widget.maxScale ?? double.infinity,
-        widget.initialScale ?? PhotoViewComputedScale.contained,
-        childSize: _childSize,
-        size: _computedSize,
-      ),
-      heroTag: widget.heroTag,
-    );
-  }
-
-  Widget _buildLoading() {
-    return widget.loadingChild != null
-        ? widget.loadingChild
-        : Center(
-            child: Container(
-              width: 20.0,
-              height: 20.0,
-              child: const CircularProgressIndicator(),
-            ),
-          );
-  }
-
-  Size get _computedSize =>
-      widget.customSize ?? _size ?? MediaQuery.of(context).size;
 }
 
-@Deprecated("Use PhotoView instead")
-class PhotoViewInline extends PhotoView {
-  const PhotoViewInline({
-    Key key,
-    @required ImageProvider imageProvider,
-    Widget loadingChild,
-    Decoration backgroundDecoration,
-    dynamic minScale,
-    dynamic maxScale,
-    dynamic initialScale,
-    bool gaplessPlayback,
-    Size size,
-    Object heroTag,
-    PhotoViewScaleStateChangedCallback scaleStateChangedCallback,
-  }) : super(
-            key: key,
-            imageProvider: imageProvider,
-            loadingChild: loadingChild,
-            backgroundDecoration: backgroundDecoration,
-            minScale: minScale,
-            maxScale: maxScale,
-            initialScale: initialScale,
-            gaplessPlayback: gaplessPlayback,
-            customSize: size,
-            heroTag: heroTag,
-            scaleStateChangedCallback: scaleStateChangedCallback);
+class _ImageProviderResolver {
+  _ImageProviderResolver({
+    @required this.state,
+    @required this.resolverListener,
+  });
+
+  final _PhotoViewState state;
+  final _ImageProviderResolverListener resolverListener;
+  ImageStream _imageStream;
+  ImageInfo _imageInfo;
+
+  PhotoView get widget => state.widget;
+
+  void resolve(ImageProvider provider) {
+    final ImageStream oldImageStream = _imageStream;
+    _imageStream = provider.resolve(const ImageConfiguration());
+    assert(_imageStream != null);
+
+    if (_imageStream.key != oldImageStream?.key) {
+      oldImageStream?.removeListener(_handleImageChanged);
+      _imageStream.addListener(_handleImageChanged);
+    }
+  }
+
+  /// [ImageListener] function
+  void _handleImageChanged(ImageInfo imageInfo, bool synchronousCall) {
+    _imageInfo = imageInfo;
+    resolverListener();
+  }
+
+  /// Unsubscribe from stream
+  void stopListening() {
+    _imageStream?.removeListener(_handleImageChanged);
+  }
 }

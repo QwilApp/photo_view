@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:photo_view/photo_view.dart';
+
 import './app_bar.dart';
 
 class FullScreenExamples extends StatelessWidget {
@@ -23,8 +24,7 @@ class FullScreenExamples extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const FullScreenWrapper(
-                                imageProvider:
-                                    const AssetImage("assets/large-image.jpg"),
+                                imageProvider: const AssetImage("assets/large-image.jpg"),
                               ),
                         ));
                   }),
@@ -35,8 +35,7 @@ class FullScreenExamples extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const FullScreenWrapper(
-                              imageProvider:
-                                  const AssetImage("assets/small-image.jpg"),
+                              imageProvider: const AssetImage("assets/small-image.jpg"),
                               backgroundDecoration: BoxDecoration(
                                   gradient: LinearGradient(
                                 colors: <Color>[Colors.white, Colors.grey],
@@ -47,14 +46,17 @@ class FullScreenExamples extends StatelessWidget {
                     );
                   }),
               ExampleButtonNode(
-                  title: "Image from the internet",
+                  title: "Thumb + Internet!!!!",
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const FullScreenWrapper(
+                        builder: (context) => FullScreenWrapper(
+                              loadingChild: (context) => const CircularProgressIndicator(),
+                              minScale: 1.0,
+                              maxScale: 10.0,
                               imageProvider: const NetworkImage(
-                                  "https://source.unsplash.com/900x1600/?camera,paper"),
+                                  "https://wallpapercave.com/wp/wp1848529.jpg"),
                             ),
                       ),
                     );
@@ -66,10 +68,8 @@ class FullScreenExamples extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const FullScreenWrapper(
-                              imageProvider:
-                                  const AssetImage("assets/peanut.gif"),
-                              backgroundDecoration:
-                                  BoxDecoration(color: Colors.white),
+                              imageProvider: const AssetImage("assets/peanut.gif"),
+                              backgroundDecoration: BoxDecoration(color: Colors.white),
                               maxScale: 2.0,
                             ),
                       ),
@@ -82,8 +82,7 @@ class FullScreenExamples extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => FullScreenWrapper(
-                              imageProvider:
-                                  const AssetImage("assets/large-image.jpg"),
+                              imageProvider: const AssetImage("assets/large-image.jpg"),
                               minScale: PhotoViewComputedScale.contained * 0.8,
                               maxScale: PhotoViewComputedScale.covered * 1.1,
                             ),
@@ -97,10 +96,8 @@ class FullScreenExamples extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                         builder: (context) => FullScreenWrapper(
-                              imageProvider:
-                                  const AssetImage("assets/large-image.jpg"),
-                              initialScale:
-                                  PhotoViewComputedScale.contained * 0.7,
+                              imageProvider: const AssetImage("assets/large-image.jpg"),
+                              initialScale: PhotoViewComputedScale.contained * 0.7,
                             ),
                       ),
                     );
@@ -132,10 +129,8 @@ class ExampleButtonNode extends StatelessWidget {
           children: <Widget>[
             Text(
               title,
-              style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 21.0,
-                  fontWeight: FontWeight.w600),
+              style:
+                  const TextStyle(color: Colors.black, fontSize: 21.0, fontWeight: FontWeight.w600),
             ),
             Container(
                 margin: const EdgeInsets.only(
@@ -161,7 +156,7 @@ class FullScreenWrapper extends StatelessWidget {
       this.initialScale});
 
   final ImageProvider imageProvider;
-  final Widget loadingChild;
+  final WidgetBuilder loadingChild;
   final Decoration backgroundDecoration;
   final dynamic minScale;
   final dynamic maxScale;
@@ -173,12 +168,14 @@ class FullScreenWrapper extends StatelessWidget {
         constraints: BoxConstraints.expand(
           height: MediaQuery.of(context).size.height,
         ),
-        child: PhotoView(
+        child: PhotoView.assetNetwork(
           imageProvider: imageProvider,
-          loadingChild: loadingChild,
+          placeholder: "assets/small_image_flutter.png",
+          activityIndicator: loadingChild,
           backgroundDecoration: backgroundDecoration,
           minScale: minScale,
           maxScale: maxScale,
+          heroTag: "I can be your hero babe",
           initialScale: initialScale,
         ));
   }

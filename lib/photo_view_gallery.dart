@@ -10,7 +10,7 @@ class PhotoViewGallery extends StatefulWidget {
   const PhotoViewGallery({
     Key key,
     @required this.pageOptions,
-    this.loadingChild,
+    this.activityIndicator,
     this.backgroundDecoration =
         const BoxDecoration(color: const Color.fromRGBO(0, 0, 0, 1.0)),
     this.gaplessPlayback = false,
@@ -20,7 +20,7 @@ class PhotoViewGallery extends StatefulWidget {
   }) : super(key: key);
 
   final List<PhotoViewGalleryPageOptions> pageOptions;
-  final Widget loadingChild;
+  final WidgetBuilder activityIndicator;
   final Decoration backgroundDecoration;
   final bool gaplessPlayback;
   final PageController pageController;
@@ -73,14 +73,13 @@ class _PhotoViewGalleryState extends State<PhotoViewGallery> {
     return PhotoView(
         key: ObjectKey(index),
         imageProvider: pageOption.imageProvider,
-        loadingChild: widget.loadingChild,
+        activityIndicator: widget.activityIndicator,
         backgroundDecoration: widget.backgroundDecoration,
         minScale: pageOption.minScale,
         maxScale: pageOption.maxScale,
         initialScale: pageOption.initialScale,
-        gaplessPlayback: widget.gaplessPlayback,
         heroTag: pageOption.heroTag,
-        scaleStateChangedCallback: scaleStateChangedCallback);
+        scaleStateChangedCallback: scaleStateChangedCallback, placeholderProvider: null,);
   }
 }
 
