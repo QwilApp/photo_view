@@ -15,7 +15,7 @@ export 'package:photo_view/photo_view_gallery.dart';
 export 'package:photo_view/src/photo_view_computed_scale.dart';
 
 typedef PhotoViewScaleStateChangedCallback = void Function(PhotoViewScaleState scaleState);
-typedef _ImageProviderResolverListener = void Function();
+typedef _ImageProviderResolverListener = void Function(ImageInfo imageInfo);
 
 /// A [StatefulWidget] that contains all the photo view rendering elements.
 ///
@@ -111,7 +111,7 @@ class PhotoView extends StatefulWidget {
     this.activityIndicator,
     this.minScale,
     this.maxScale,
-    this.initialScale = 1.0,
+    this.initialScale,
     this.customSize,
     this.heroTag,
     this.scaleStateChangedCallback,
@@ -121,7 +121,7 @@ class PhotoView extends StatefulWidget {
   })  : assert(imageProvider != null),
         assert(placeholder != null),
         assert(alignment != null),
-        placeholderProvider = MemoryImage(placeholder, scale: initialScale),
+        placeholderProvider = MemoryImage(placeholder),
         super(key: key);
 
   PhotoView.assetNetwork({
@@ -132,7 +132,7 @@ class PhotoView extends StatefulWidget {
     this.activityIndicator,
     this.minScale,
     this.maxScale,
-    this.initialScale = 1.0,
+    this.initialScale,
     this.customSize,
     this.heroTag,
     this.scaleStateChangedCallback,
@@ -200,7 +200,8 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
   _ImageProviderResolver _placeholderResolver;
 
   PhotoViewScaleState _scaleState;
-  Size _size;
+  Size _screenSize;
+  Size _imageSize;
 
   PhotoViewLoadingPhase _phase = PhotoViewLoadingPhase.start;
 
@@ -211,15 +212,22 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
 
   @override
   void initState() {
-    _imageResolver = _ImageProviderResolver(state: this, resolverListener: _updatePhase);
+    _imageResolver = _ImageProviderResolver(
+        state: this,
+        resolverListener: (info) {
+          _imageSize = Size(info.image.width.toDouble(), info.image.height.toDouble());
+          _updatePhase();
+        });
     _placeholderResolver = _ImageProviderResolver(
         state: this,
-        resolverListener: () {
+        resolverListener: (info) {
           setState(() {
-            // Trigger rebuild to display the placeholder image
+            _imageSize = Size(info.image.width.toDouble(), info.image.height.toDouble());
           });
         });
     _scaleState = PhotoViewScaleState.initial;
+    _screenSize = Size.zero;
+    _imageSize = Size.zero;
     super.initState();
   }
 
@@ -314,11 +322,11 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
   @override
   void afterFirstLayout(BuildContext context) {
     setState(() {
-      _size = context.size;
+      _screenSize = context.size;
     });
   }
 
-  Size get _computedSize => widget.customSize ?? _size ?? MediaQuery.of(context).size;
+  Size get _renderAreaSize => widget.customSize ?? _screenSize ?? MediaQuery.of(context).size;
 
   @override
   Widget build(BuildContext context) {
@@ -328,18 +336,19 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
       setNextScaleState: setNextScaleState,
       onStartPanning: onStartPanning,
       imageProvider: _isShowingPlaceholder ? widget.placeholderProvider : widget.imageProvider,
-      childSize: _computedSize,
+      imageSize: _isShowingPlaceholder ? _imageSize : _renderAreaSize,
+      screenSize: _renderAreaSize,
       scaleState: _scaleState,
       backgroundDecoration: widget.backgroundDecoration,
-      size: _computedSize,
       enableRotation: widget.enableRotation,
       enableScaling: !_isShowingPlaceholder,
       scaleBoundaries: ScaleBoundaries(
-        widget.minScale ?? 0.0,
-        widget.maxScale ?? double.infinity,
+        widget.minScale ?? PhotoViewComputedScale.contained,
+        widget.maxScale ?? 100.0,
         widget.initialScale ?? PhotoViewComputedScale.contained,
-        childSize: _computedSize,
-        size: _computedSize,
+        //FIXME: this is dirty hack. Have issues while setting original image size
+        imageSize: _isShowingPlaceholder ? _imageSize : _renderAreaSize,
+        screenSize: _renderAreaSize,
       ),
       heroTag: widget.heroTag,
     );
@@ -367,8 +376,6 @@ class _ImageProviderResolver {
   ImageStream _imageStream;
   ImageInfo _imageInfo;
 
-  PhotoView get widget => state.widget;
-
   void resolve(ImageProvider provider) {
     final ImageStream oldImageStream = _imageStream;
     _imageStream = provider.resolve(const ImageConfiguration());
@@ -383,7 +390,7 @@ class _ImageProviderResolver {
   /// [ImageListener] function
   void _handleImageChanged(ImageInfo imageInfo, bool synchronousCall) {
     _imageInfo = imageInfo;
-    resolverListener();
+    resolverListener(imageInfo);
   }
 
   /// Unsubscribe from stream

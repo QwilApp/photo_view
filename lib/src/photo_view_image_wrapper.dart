@@ -8,11 +8,11 @@ class PhotoViewImageWrapper extends StatefulWidget {
     Key key,
     @required this.setNextScaleState,
     @required this.onStartPanning,
-    @required this.childSize,
+    @required this.imageSize,
     @required this.scaleState,
     @required this.scaleBoundaries,
     @required this.imageProvider,
-    @required this.size,
+    @required this.screenSize,
     this.backgroundDecoration,
     this.heroTag,
     this.enableRotation,
@@ -21,12 +21,12 @@ class PhotoViewImageWrapper extends StatefulWidget {
 
   final Function setNextScaleState;
   final Function onStartPanning;
-  final Size childSize;
+  final Size imageSize;
   final PhotoViewScaleState scaleState;
   final Decoration backgroundDecoration;
   final ScaleBoundaries scaleBoundaries;
   final ImageProvider imageProvider;
-  final Size size;
+  final Size screenSize;
   final String heroTag;
   final bool enableRotation;
   final bool enableScaling;
@@ -55,9 +55,7 @@ class _PhotoViewImageWrapperState extends State<PhotoViewImageWrapper>
   Animation<double> _rotationAnimation;
 
   void handleScaleAnimation() {
-    setState(() {
-      _scale = _scaleAnimation.value;
-    });
+    setState(() => _scale = _scaleAnimation.value);
   }
 
   void handlePositionAnimate() {
@@ -129,10 +127,10 @@ class _PhotoViewImageWrapperState extends State<PhotoViewImageWrapper>
     final double _scale = scale ?? scaleStateAwareScale();
     final double x = offset.dx;
     final double y = offset.dy;
-    final double computedWidth = widget.childSize.width * _scale;
-    final double computedHeight = widget.childSize.height * _scale;
-    final double screenWidth = widget.size.width;
-    final double screenHeight = widget.size.height;
+    final double computedWidth = widget.imageSize.width * _scale;
+    final double computedHeight = widget.imageSize.height * _scale;
+    final double screenWidth = widget.screenSize.width;
+    final double screenHeight = widget.screenSize.height;
     final double screenHalfX = screenWidth / 2;
     final double screenHalfY = screenHeight / 2;
 
@@ -151,7 +149,7 @@ class _PhotoViewImageWrapperState extends State<PhotoViewImageWrapper>
     return _scale != null || widget.scaleState == PhotoViewScaleState.zooming
         ? _scale
         : getScaleForScaleState(
-            widget.size, widget.scaleState, widget.childSize, widget.scaleBoundaries);
+            widget.screenSize, widget.scaleState, widget.imageSize, widget.scaleBoundaries);
   }
 
   void animateScale(double from, double to) {
@@ -207,12 +205,12 @@ class _PhotoViewImageWrapperState extends State<PhotoViewImageWrapper>
     if (oldWidget.scaleState != widget.scaleState &&
         widget.scaleState != PhotoViewScaleState.zooming) {
       final double prevScale = _scale == null
-          ? getScaleForScaleState(
-              widget.size, PhotoViewScaleState.initial, widget.childSize, widget.scaleBoundaries)
+          ? getScaleForScaleState(widget.screenSize, PhotoViewScaleState.initial, widget.imageSize,
+              widget.scaleBoundaries)
           : _scale;
 
       final double nextScale = getScaleForScaleState(
-          widget.size, widget.scaleState, widget.childSize, widget.scaleBoundaries);
+          widget.screenSize, widget.scaleState, widget.imageSize, widget.scaleBoundaries);
 
       animateScale(prevScale, nextScale);
       animatePosition(_position, Offset.zero);
@@ -229,7 +227,7 @@ class _PhotoViewImageWrapperState extends State<PhotoViewImageWrapper>
     }
 
     final double originalScale = getScaleForScaleState(
-        widget.size, _originalScaleState, widget.childSize, widget.scaleBoundaries);
+        widget.screenSize, _originalScaleState, widget.imageSize, widget.scaleBoundaries);
 
     double prevScale = originalScale;
     PhotoViewScaleState _prevScaleState = _originalScaleState;
@@ -240,7 +238,7 @@ class _PhotoViewImageWrapperState extends State<PhotoViewImageWrapper>
       _prevScaleState = _nextScaleState;
       _nextScaleState = nextScaleState(_prevScaleState);
       nextScale = getScaleForScaleState(
-          widget.size, _nextScaleState, widget.childSize, widget.scaleBoundaries);
+          widget.screenSize, _nextScaleState, widget.imageSize, widget.scaleBoundaries);
     } while (prevScale == nextScale && _originalScaleState != _nextScaleState);
 
     if (originalScale == nextScale) {
@@ -258,8 +256,8 @@ class _PhotoViewImageWrapperState extends State<PhotoViewImageWrapper>
 
     final rotationMatrix = Matrix4.identity()..rotateZ(_rotation);
 
-    final Widget childLayout = CustomSingleChildLayout(
-      delegate: _ImagePositionDelegate(widget.childSize.width, widget.childSize.height),
+    final Widget imageLayout = CustomSingleChildLayout(
+      delegate: _ImagePositionDelegate(widget.imageSize.width, widget.imageSize.height),
       child: _buildHero(),
     );
 
@@ -268,12 +266,12 @@ class _PhotoViewImageWrapperState extends State<PhotoViewImageWrapper>
           child: Transform(
         child: widget.enableRotation
             ? Transform(
-                child: childLayout,
+                child: imageLayout,
                 transform: rotationMatrix,
                 alignment: Alignment.center,
                 origin: _rotationFocusPoint,
               )
-            : childLayout,
+            : imageLayout,
         transform: matrix,
         alignment: Alignment.center,
       )),
@@ -291,10 +289,11 @@ class _PhotoViewImageWrapperState extends State<PhotoViewImageWrapper>
         : container;
   }
 
-  Widget _buildHero() =>
-      widget.heroTag != null ? Hero(tag: widget.heroTag, child: _buildImage()) : _buildImage();
+  Widget _buildHero() {
+    return widget.heroTag != null ? Hero(tag: widget.heroTag, child: _buildImage()) : _buildImage();
+  }
 
-  Widget _buildImage() => Image(image: widget.imageProvider);
+  Widget _buildImage() => Image(image: widget.imageProvider, gaplessPlayback: true);
 }
 
 class _ImagePositionDelegate extends SingleChildLayoutDelegate {
@@ -321,7 +320,5 @@ class _ImagePositionDelegate extends SingleChildLayoutDelegate {
   }
 
   @override
-  bool shouldRelayout(SingleChildLayoutDelegate oldDelegate) {
-    return true;
-  }
+  bool shouldRelayout(SingleChildLayoutDelegate oldDelegate) => true;
 }

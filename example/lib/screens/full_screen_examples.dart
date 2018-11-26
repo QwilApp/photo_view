@@ -53,8 +53,6 @@ class FullScreenExamples extends StatelessWidget {
                       MaterialPageRoute(
                         builder: (context) => FullScreenWrapper(
                               loadingChild: (context) => const CircularProgressIndicator(),
-                              minScale: 1.0,
-                              maxScale: 10.0,
                               imageProvider: const NetworkImage(
                                   "https://wallpapercave.com/wp/wp1848529.jpg"),
                             ),
@@ -170,7 +168,7 @@ class FullScreenWrapper extends StatelessWidget {
         ),
         child: PhotoView.assetNetwork(
           imageProvider: imageProvider,
-          placeholder: "assets/small_image_flutter.png",
+          placeholder: "assets/small-image.jpg",
           activityIndicator: loadingChild,
           backgroundDecoration: backgroundDecoration,
           minScale: minScale,
