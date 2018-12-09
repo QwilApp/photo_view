@@ -132,14 +132,17 @@ class _GalleryPhotoViewWrapperState extends State<GalleryPhotoViewWrapper> {
                 pageOptions: <PhotoViewGalleryPageOptions>[
                   PhotoViewGalleryPageOptions(
                     imageProvider: widget.imageProvider,
+                    placeholder: "assets/small-image.jpg",
                     heroTag: "tag1",
                   ),
                   PhotoViewGalleryPageOptions(
                       imageProvider: widget.imageProvider2,
                       heroTag: "tag2",
+                      placeholder: "assets/small_image_flutter.png",
                       maxScale: PhotoViewComputedScale.contained * 0.3),
                   PhotoViewGalleryPageOptions(
                     imageProvider: widget.imageProvider3,
+                    placeholder: "assets/large-image.jpg",
                     minScale: PhotoViewComputedScale.contained * 0.8,
                     maxScale: PhotoViewComputedScale.covered * 1.1,
                     heroTag: "tag3",

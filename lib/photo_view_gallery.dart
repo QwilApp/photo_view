@@ -11,8 +11,7 @@ class PhotoViewGallery extends StatefulWidget {
     Key key,
     @required this.pageOptions,
     this.activityIndicator,
-    this.backgroundDecoration =
-        const BoxDecoration(color: const Color.fromRGBO(0, 0, 0, 1.0)),
+    this.backgroundDecoration = const BoxDecoration(color: const Color.fromRGBO(0, 0, 0, 1.0)),
     this.gaplessPlayback = false,
     this.pageController,
     this.onPageChanged,
@@ -48,9 +47,7 @@ class _PhotoViewGalleryState extends State<PhotoViewGallery> {
     setState(() {
       _locked = scaleState != PhotoViewScaleState.initial;
     });
-    widget.scaleStateChangedCallback != null
-        ? widget.scaleStateChangedCallback(scaleState)
-        : null;
+    widget.scaleStateChangedCallback != null ? widget.scaleStateChangedCallback(scaleState) : null;
   }
 
   int get actualPage {
@@ -71,15 +68,19 @@ class _PhotoViewGalleryState extends State<PhotoViewGallery> {
   Widget _buildItem(context, int index) {
     final pageOption = widget.pageOptions[index];
     return PhotoView(
-        key: ObjectKey(index),
-        imageProvider: pageOption.imageProvider,
-        activityIndicator: widget.activityIndicator,
-        backgroundDecoration: widget.backgroundDecoration,
-        minScale: pageOption.minScale,
-        maxScale: pageOption.maxScale,
-        initialScale: pageOption.initialScale,
-        heroTag: pageOption.heroTag,
-        scaleStateChangedCallback: scaleStateChangedCallback, placeholderProvider: null,);
+      key: ObjectKey(index),
+      imageProvider: pageOption.imageProvider,
+      placeholderProvider: pageOption.initialScale != null
+          ? ExactAssetImage(pageOption.placeholder, scale: pageOption.initialScale)
+          : AssetImage(pageOption.placeholder),
+      activityIndicator: widget.activityIndicator,
+      backgroundDecoration: widget.backgroundDecoration,
+      minScale: pageOption.minScale,
+      maxScale: pageOption.maxScale,
+      initialScale: pageOption.initialScale,
+      heroTag: pageOption.heroTag,
+      scaleStateChangedCallback: scaleStateChangedCallback,
+    );
   }
 }
 
@@ -87,6 +88,7 @@ class PhotoViewGalleryPageOptions {
   PhotoViewGalleryPageOptions({
     Key key,
     @required this.imageProvider,
+    @required this.placeholder,
     this.heroTag,
     this.minScale,
     this.maxScale,
@@ -94,6 +96,7 @@ class PhotoViewGalleryPageOptions {
   });
 
   final ImageProvider imageProvider;
+  final String placeholder;
   final Object heroTag;
   final dynamic minScale;
   final dynamic maxScale;

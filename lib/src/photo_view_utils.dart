@@ -40,6 +40,9 @@ double getScaleForScaleState(Size size, PhotoViewScaleState scaleState,
 }
 
 double scaleForContained({@required Size size, @required Size childSize}) {
+  if (size.isEmpty || childSize.isEmpty) {
+    return 0.0;
+  }
   final double imageWidth = childSize.width;
   final double imageHeight = childSize.height;
 
@@ -50,6 +53,9 @@ double scaleForContained({@required Size size, @required Size childSize}) {
 }
 
 double scaleForCovering({@required Size size, @required Size childSize}) {
+  if (size.isEmpty || childSize.isEmpty) {
+    return 0.0;
+  }
   final double imageWidth = childSize.width;
   final double imageHeight = childSize.height;
 
