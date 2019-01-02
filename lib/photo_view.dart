@@ -121,7 +121,12 @@ class PhotoView extends StatefulWidget {
   })  : assert(imageProvider != null),
         assert(placeholder != null),
         assert(alignment != null),
-        placeholderProvider = MemoryImage(placeholder),
+        placeholderProvider = MemoryImage(
+          placeholder,
+          scale: initialScale == null
+              ? 1.0
+              : (initialScale is PhotoViewComputedScale ? initialScale.multiplier : initialScale),
+        ),
         super(key: key);
 
   PhotoView.assetNetwork({
@@ -143,7 +148,10 @@ class PhotoView extends StatefulWidget {
         assert(placeholder != null),
         assert(alignment != null),
         placeholderProvider = initialScale != null
-            ? ExactAssetImage(placeholder, bundle: bundle, scale: initialScale)
+            ? ExactAssetImage(placeholder,
+                bundle: bundle,
+                scale:
+                    initialScale is PhotoViewComputedScale ? initialScale.multiplier : initialScale)
             : AssetImage(placeholder, bundle: bundle),
         super(key: key);
 
@@ -336,7 +344,7 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
       setNextScaleState: setNextScaleState,
       onStartPanning: onStartPanning,
       imageProvider: _isShowingPlaceholder ? widget.placeholderProvider : widget.imageProvider,
-      imageSize: _isShowingPlaceholder ? _imageSize : _renderAreaSize,
+      imageSize: _imageSize,
       screenSize: _renderAreaSize,
       scaleState: _scaleState,
       backgroundDecoration: widget.backgroundDecoration,
@@ -344,10 +352,9 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
       enableScaling: !_isShowingPlaceholder,
       scaleBoundaries: ScaleBoundaries(
         widget.minScale ?? PhotoViewComputedScale.contained,
-        widget.maxScale ?? 100.0,
+        widget.maxScale ?? 10.0,
         widget.initialScale ?? PhotoViewComputedScale.contained,
-        //FIXME: this is dirty hack. Have issues while setting original image size
-        imageSize: _isShowingPlaceholder ? _imageSize : _renderAreaSize,
+        imageSize: _imageSize,
         screenSize: _renderAreaSize,
       ),
       heroTag: widget.heroTag,
