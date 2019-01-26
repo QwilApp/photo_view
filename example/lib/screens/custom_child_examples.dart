@@ -15,20 +15,20 @@ class CustomChildExample extends StatelessWidget {
             showGoBack: true,
           ),
           Expanded(
-              child: Column(
-            children: <Widget>[
-              Container(
-                padding: const EdgeInsets.all(20.0),
-                child: const Text(
-                  "Example of usage in a contained context",
-                  style: const TextStyle(fontSize: 18.0),
+            child: Column(
+              children: <Widget>[
+                Container(
+                  padding: const EdgeInsets.all(20.0),
+                  child: const Text(
+                    "Example of usage in a contained context",
+                    style: const TextStyle(fontSize: 18.0),
+                  ),
                 ),
-              ),
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-                height: 450.0,
-                child: ClipRect(
-                  child: Container(
+                Container(
+                  margin: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+                  height: 450.0,
+                  child: ClipRect(
+                    child: Container(
                       decoration: const BoxDecoration(color: Colors.lightGreenAccent),
                       padding: const EdgeInsets.all(10.0),
                       child: Column(
@@ -43,11 +43,13 @@ class CustomChildExample extends StatelessWidget {
                             height: 100.0,
                           )
                         ],
-                      )),
-                ),
-              )
-            ],
-          ))
+                      ),
+                    ),
+                  ),
+                )
+              ],
+            ),
+          ),
         ],
       ),
     );
