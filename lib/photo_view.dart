@@ -199,6 +199,18 @@ class PhotoView extends StatefulWidget {
 
   final bool enableRotation;
 
+  /// Evict old image providers from image cache
+  /// Can be useful if provider got stuck in cache
+  /// or listeners where removed before loading finished
+  void clearProviders(PhotoView newWidget) {
+    if (newWidget.placeholderProvider != placeholderProvider) {
+      placeholderProvider.evict();
+    }
+    if (newWidget.imageProvider != imageProvider) {
+      imageProvider.evict();
+    }
+  }
+
   @override
   State<StatefulWidget> createState() => _PhotoViewState();
 }
@@ -213,17 +225,14 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
 
   PhotoViewLoadingPhase _phase = PhotoViewLoadingPhase.start;
 
-  PhotoViewLoadingPhase get phase => _phase;
-
-  ImageProvider get provider =>
-      _isShowingPlaceholder ? widget.placeholderProvider : widget.imageProvider;
-
   @override
   void initState() {
     _imageResolver = _ImageProviderResolver(
         state: this,
         resolverListener: (info) {
-          _imageSize = Size(info.image.width.toDouble(), info.image.height.toDouble());
+          if (info != null && info.image != null) {
+            _imageSize = Size(info.image.width.toDouble(), info.image.height.toDouble());
+          }
           _updatePhase();
         });
     _placeholderResolver = _ImageProviderResolver(
@@ -234,7 +243,6 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
           });
         });
     _scaleState = PhotoViewScaleState.initial;
-    _screenSize = Size.zero;
     _imageSize = Size.zero;
     super.initState();
   }
@@ -247,11 +255,12 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
 
   @override
   void didUpdateWidget(PhotoView oldWidget) {
-    super.didUpdateWidget(oldWidget);
     if (widget.imageProvider != oldWidget.imageProvider ||
         widget.placeholderProvider != widget.placeholderProvider) {
+      oldWidget.clearProviders(widget);
       _resolveImage();
     }
+    super.didUpdateWidget(oldWidget);
   }
 
   @override
@@ -305,10 +314,6 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
     return _phase != PhotoViewLoadingPhase.completed;
   }
 
-  ImageInfo get _imageInfo {
-    return _isShowingPlaceholder ? _placeholderResolver._imageInfo : _imageResolver._imageInfo;
-  }
-
   void setNextScaleState(PhotoViewScaleState newScaleState) {
     setState(() {
       _scaleState = newScaleState;
@@ -350,6 +355,7 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
       backgroundDecoration: widget.backgroundDecoration,
       enableRotation: widget.enableRotation,
       enableScaling: !_isShowingPlaceholder,
+      heroTag: widget.heroTag,
       scaleBoundaries: ScaleBoundaries(
         widget.minScale ?? PhotoViewComputedScale.contained,
         widget.maxScale ?? 10.0,
@@ -357,7 +363,6 @@ class _PhotoViewState extends State<PhotoView> with AfterLayoutMixin<PhotoView> 
         imageSize: _imageSize,
         screenSize: _renderAreaSize,
       ),
-      heroTag: widget.heroTag,
     );
 
     return widget.activityIndicator != null && _isShowingPlaceholder

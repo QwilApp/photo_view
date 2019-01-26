@@ -263,18 +263,19 @@ class _PhotoViewImageWrapperState extends State<PhotoViewImageWrapper>
 
     final Widget container = Container(
       child: Center(
-          child: Transform(
-        child: widget.enableRotation
-            ? Transform(
-                child: imageLayout,
-                transform: rotationMatrix,
-                alignment: Alignment.center,
-                origin: _rotationFocusPoint,
-              )
-            : imageLayout,
-        transform: matrix,
-        alignment: Alignment.center,
-      )),
+        child: Transform(
+          child: widget.enableRotation
+              ? Transform(
+                  child: imageLayout,
+                  transform: rotationMatrix,
+                  alignment: Alignment.center,
+                  origin: _rotationFocusPoint,
+                )
+              : imageLayout,
+          transform: matrix,
+          alignment: Alignment.center,
+        ),
+      ),
       decoration: widget.backgroundDecoration,
     );
 

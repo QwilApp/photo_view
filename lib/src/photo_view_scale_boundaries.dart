@@ -4,9 +4,13 @@ import 'package:photo_view/src/photo_view_utils.dart';
 
 // ignore_for_file: avoid_as
 class ScaleBoundaries {
-  ScaleBoundaries(this._minScale, this._maxScale, this._initialScale,
-      {@required this.screenSize, @required this.imageSize})
-      : assert(_minScale is double || _minScale is PhotoViewComputedScale),
+  ScaleBoundaries(
+    this._minScale,
+    this._maxScale,
+    this._initialScale, {
+    @required this.screenSize,
+    @required this.imageSize,
+  })  : assert(_minScale is double || _minScale is PhotoViewComputedScale),
         assert(_maxScale is double || _maxScale is PhotoViewComputedScale),
         assert(_initialScale is double || _initialScale is PhotoViewComputedScale);
 
